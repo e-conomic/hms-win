@@ -51,7 +51,7 @@ function Copy-ToServiceFolder($tempServiceFolder, $serviceFolder) {
 
 function Run-HookScript($hookScript) {
   if (Test-Path $hookScript) {    
-    & $hookScript $serviceName
+    & $hookScript -serviceName $serviceName -hmsModules "$PSScriptRoot\modules"
     Remove-Item $hookScript
     return [PSCustomObject]@{
       message = "running startup script";
