@@ -1,0 +1,16 @@
+{
+  "name": "hms-win",
+  "description": "powershell impl of a hms server",
+  "repository": "git://github.com/e-conomic/hms-win.git",
+  "dependencies": {
+    "pump": "~0.3.1",
+    "hms-protocol": "~0.2.1",
+    "request": "^2.34.0",
+    "tar-fs": "^0.2.2",
+    "xtend": "^2.1.2",
+    "pingable": "^0.2.0",
+    "once": "^1.3.0",
+    "JSONStream": "^0.8.0"
+  },
+  "version": "0.0.1"
+}
