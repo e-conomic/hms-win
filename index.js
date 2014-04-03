@@ -24,11 +24,30 @@ var PS = fs.existsSync(PS_SYS_NATIVE) ? PS_SYS_NATIVE : PS_SYS_32;
 if (!fs.existsSync(PS)) throw new Error('powershell not found');
 
 var remote = parse(process.argv[2] || 'localhost:10002');
-var origin = os.hostname();
+var origin = "win-" + os.hostname();
 
 var server = http.createServer(function(request, response) {
 	response.end('hms-windows-dock\n');
 });
+
+var tarServer = http.createServer(function(request, response) {
+	console.log('fetching tar: ', request.url)
+	var req = http.request(xtend(remote, {
+		method:'GET',
+		path:request.url,
+		headers:{origin:origin}
+	}));	
+
+	req.on('response', function(res) {
+		response.writeHead(res.statusCode, res.headers);
+		pump(res, response)
+	});
+	req.on('error', function() {
+		response.destroy();
+	});
+	req.end();
+});
+tarServer.listen(7001);
 
 var ps = function(file, opts, cb) {
 	var params = [];
@@ -38,10 +57,7 @@ var ps = function(file, opts, cb) {
 	});
 
 	var ch = proc.spawn(PS, ['-ExecutionPolicy', 'remotesigned', '-File', path.join(POWERSHELL, file+'.ps1')].concat(params));
-
-	ch.stderr.pipe(process.stdout);
-	ch.stdout.pipe(process.stdout);
-
+	
 	cb = once(cb);
 	ch.stdout.pipe(JSONStream.parse()).once('data', function(data) {
 		cb(null, data);
@@ -49,6 +65,9 @@ var ps = function(file, opts, cb) {
 
 	ch.on('error', cb);
 	ch.on('close', function(code) {
+		if (!code) {
+			return cb();
+		}		
 		cb(new Error('Stream closed without data'));
 	});
 };
@@ -97,11 +116,11 @@ var onpeer = function(peer) {
 		}, cb);
 	});
 
-	peer.on('sync', function(id, service, cb) {
+	peer.on('sync', function(id, service, cb) {		
 		ps('sync', {
 			serviceName: id,
 			fetchTar: path.join(__dirname, 'fetch-tar.js'),
-			tarball: remote.url+'/'+id
+			tarball: "http://localhost:7001/" + id
 		}, cb)
 	});
 
@@ -116,16 +135,21 @@ var onpeer = function(peer) {
 	});
 
 	peer.on('list', function(cb) {
-		ps('list', {}, cb);
-	});
-
-	peer.on('ps', function(cb) {
-		ps('ps', {}, function(err, data) {
+		ps('list', {}, function(err, data) {
 			if (err) {
 				return cb(err, null);
 			}
+			cb(null, data || []);
+		});
+	});
 
-			cb(null, [{ id: 'testDock', list: data}])
+	peer.on('ps', function(cb) {
+		ps('ps', {}, function(err, data) {			
+			if (err) {
+				return cb(err, null);
+			}
+			
+			cb(null, [{ id: origin, list: data || []}])
 		});
 	});
 };
