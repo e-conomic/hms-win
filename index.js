@@ -1,6 +1,7 @@
 var http = require('http');
 var pump = require('pump');
 var protocol = require('hms-protocol');
+var parse = require('hms/lib/parse-remote');
 var path = require('path');
 var proc = require('child_process');
 var fs = require('fs');
@@ -22,17 +23,6 @@ var PS_SYS_32 = 'c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe'
 var PS = fs.existsSync(PS_SYS_NATIVE) ? PS_SYS_NATIVE : PS_SYS_32;
 if (!fs.existsSync(PS)) throw new Error('powershell not found');
 
-var parse = function(cs) {
-	cs = cs.split(':');
-	var res = {
-		host: cs[0],
-		port: Number(cs[1] || 10002)
-	};
-
-	res.url = 'http://'+res.host+':'+res.port;
-	return res;
-};
-
 var remote = parse(process.argv[2] || 'localhost:10002');
 var origin = os.hostname();
 
@@ -51,12 +41,12 @@ var ps = function(file, opts, cb) {
 
 	ch.stderr.pipe(process.stdout);
 	ch.stdout.pipe(process.stdout);
-	
+
 	cb = once(cb);
-	ch.stdout.pipe(JSONStream.parse()).once('data', function(data) {		
+	ch.stdout.pipe(JSONStream.parse()).once('data', function(data) {
 		cb(null, data);
 	});
-		
+
 	ch.on('error', cb);
 	ch.on('close', function(code) {
 		cb(new Error('Stream closed without data'));
@@ -126,7 +116,7 @@ var onpeer = function(peer) {
 	});
 
 	peer.on('list', function(cb) {
-		ps('list', {}, cb);		
+		ps('list', {}, cb);
 	});
 
 	peer.on('ps', function(cb) {
@@ -136,7 +126,7 @@ var onpeer = function(peer) {
 			}
 
 			cb(null, [{ id: 'testDock', list: data}])
-		});		
+		});
 	});
 };
 
