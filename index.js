@@ -134,12 +134,18 @@ var onpeer = function(peer) {
 		}, cb)
 	});
 
+	peer.on('stop', function(id, cb) {
+		ps('stop', {
+			serviceName: id
+		}, cb)
+	});
+
 	peer.on('list', function(cb) {
 		ps('list', {}, function(err, data) {
 			if (err) {
 				return cb(err, null);
 			}
-			cb(null, data || []);
+			cb(null, [].concat(data || []));
 		});
 	});
 
@@ -149,7 +155,7 @@ var onpeer = function(peer) {
 				return cb(err, null);
 			}
 			
-			cb(null, [{ id: origin, list: data || []}])
+			cb(null, [{ id: origin, list: [].concat(data || [])}])
 		});
 	});
 };
