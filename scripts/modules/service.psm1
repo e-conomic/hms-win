@@ -124,8 +124,19 @@ function Stop-Service($serviceName) {
             status = 304
         }            
     }
+    
+    $i = 0
+    Do {
+        try {
+            Stop-WebAppPool $serviceName; 
+        }
+        catch {}        
+        $pool = Get-Item "IIS:\AppPools\$serviceName"
+        $i++
+        sleep -m 100
+    }
+    While($pool.State -ne 'Stopped' -and $i -lt 10)
 
-    Stop-WebAppPool $serviceName
     return [PSCustomObject]@{
         message = "Stopped app pool: $serviceName";
         status = 200
@@ -169,9 +180,9 @@ function Remove-AppPool ($serviceName) {
     }
 }
 
-function Remove-ServiceFolder ($serviceName, $serviceFolder) {    
+function Remove-ServiceFolder ($serviceName, $serviceFolder) {        
     if (Test-Path $serviceFolder) {        
-        Remove-Item $serviceFolder -Recurse
+        Remove-Item $serviceFolder -Recurse -Force
         return [PSCustomObject]@{
             message = "Removed folder: $serviceFolder";
             status = 200            
@@ -184,10 +195,7 @@ function Remove-ServiceFolder ($serviceName, $serviceFolder) {
     }
 }
 
-function Remove-Service ($serviceName, $serviceFolder) {    
-    Remove-AppPool $serviceName
-    Remove-ServiceFolder $serviceName $serviceFolder
-
+function Remove-Website ($serviceName) {
     $serviceUrl = "IIS:\Sites\$serviceName"
     if (!(Test-Path $serviceUrl)) {
         return [PSCustomObject]@{
@@ -201,6 +209,13 @@ function Remove-Service ($serviceName, $serviceFolder) {
         message = "Deleted service: $serviceUrl";            
         status = 200
     }    
+}
+
+function Remove-Service ($serviceName, $serviceFolder) {    
+    Stop-Service $serviceName
+    Remove-Website $serviceName
+    Remove-AppPool $serviceName
+    Remove-ServiceFolder $serviceName $serviceFolder    
 }
 
 function List-Services () {            
