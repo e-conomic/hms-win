@@ -134,6 +134,12 @@ var onpeer = function(peer) {
 		}, cb)
 	});
 
+	peer.on('start', function(id, cb) {
+		ps('restart', {
+			serviceName: id
+		}, cb)
+	});
+
 	peer.on('stop', function(id, cb) {
 		ps('stop', {
 			serviceName: id
