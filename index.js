@@ -36,7 +36,7 @@ var tarServer = http.createServer(function(request, response) {
 		method:'GET',
 		path:request.url,
 		headers:{origin:origin}
-	}));	
+	}));
 
 	req.on('response', function(res) {
 		response.writeHead(res.statusCode, res.headers);
@@ -57,7 +57,7 @@ var ps = function(file, opts, cb) {
 	});
 
 	var ch = proc.spawn(PS, ['-ExecutionPolicy', 'remotesigned', '-File', path.join(POWERSHELL, file+'.ps1')].concat(params));
-	
+
 	cb = once(cb);
 	ch.stdout.pipe(JSONStream.parse()).once('data', function(data) {
 		cb(null, data);
@@ -67,7 +67,7 @@ var ps = function(file, opts, cb) {
 	ch.on('close', function(code) {
 		if (!code) {
 			return cb();
-		}		
+		}
 		cb(new Error('Stream closed without data'));
 	});
 };
@@ -92,6 +92,11 @@ var connect = function() {
 
 		var peer = protocol();
 		onpeer(peer);
+		peer.handshake({
+			type: 'dock',
+			tags: ['windows']
+		});
+
 		pump(socket, peer, socket, reconnect);
 		peer.write(data);
 	});
@@ -116,7 +121,7 @@ var onpeer = function(peer) {
 		}, cb);
 	});
 
-	peer.on('sync', function(id, service, cb) {		
+	peer.on('sync', function(id, service, cb) {
 		ps('sync', {
 			serviceName: id,
 			fetchTar: path.join(__dirname, 'fetch-tar.js'),
@@ -156,11 +161,11 @@ var onpeer = function(peer) {
 	});
 
 	peer.on('ps', function(cb) {
-		ps('ps', {}, function(err, data) {			
+		ps('ps', {}, function(err, data) {
 			if (err) {
 				return cb(err, null);
 			}
-			
+
 			cb(null, [{ id: origin, list: [].concat(data || [])}])
 		});
 	});
@@ -168,10 +173,12 @@ var onpeer = function(peer) {
 
 server.on('connect', function(request, socket, data) {
 	var peer = protocol();
-	onpeer(peer);
 	socket.write(HANDSHAKE);
 	pump(socket, peer, socket);
 	peer.write(data);
+	peer.on('handshake', function(handshake) {
+		onpeer(peer);
+	});
 });
 
 server.listen(10002);
