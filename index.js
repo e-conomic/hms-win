@@ -93,6 +93,7 @@ var connect = function() {
 		var peer = protocol();
 		onpeer(peer);
 		peer.handshake({
+			id: origin,
 			type: 'dock',
 			tags: ['windows']
 		});
