@@ -18,20 +18,20 @@ var HANDSHAKE =
 
 var POWERSHELL = path.join(__dirname, 'scripts');
 var PS_SYS_NATIVE = 'c:\\windows\\sysnative\\windowspowershell\\v1.0\\powershell.exe';
-var PS_SYS_32 = 'c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe'
+var PS_SYS_32 = 'c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe';
 
 var PS = fs.existsSync(PS_SYS_NATIVE) ? PS_SYS_NATIVE : PS_SYS_32;
 if (!fs.existsSync(PS)) throw new Error('powershell not found');
 
 var remote = parse(process.argv[2] || 'localhost:10002');
-var origin = "win-" + os.hostname();
+var origin = os.hostname();
 
 var server = http.createServer(function(request, response) {
 	response.end('hms-windows-dock\n');
 });
 
 var tarServer = http.createServer(function(request, response) {
-	console.log('fetching tar: ', request.url)
+	console.log('fetching tar: ', request.url);
 	var req = http.request(xtend(remote, {
 		method:'GET',
 		path:request.url,
@@ -40,7 +40,7 @@ var tarServer = http.createServer(function(request, response) {
 
 	req.on('response', function(res) {
 		response.writeHead(res.statusCode, res.headers);
-		pump(res, response)
+		pump(res, response);
 	});
 	req.on('error', function() {
 		response.destroy();
@@ -68,7 +68,7 @@ var ps = function(file, opts, cb) {
 		if (!code) {
 			return cb();
 		}
-		cb(new Error('Stream closed without data'));
+		return cb(new Error('Stream closed without data'));
 	});
 };
 
@@ -83,7 +83,7 @@ var connect = function() {
 	var reconnect = once(function() {
 		if (dropped) return setTimeout(connect, 5000);
 		dropped = true;
-		setTimeout(connect, 2500);
+		return setTimeout(connect, 2500);
 	});
 
 	req.on('error', reconnect);
@@ -127,7 +127,7 @@ var onpeer = function(peer) {
 			serviceName: id,
 			fetchTar: path.join(__dirname, 'fetch-tar.js'),
 			tarball: "http://localhost:7001/" + id
-		}, cb)
+		}, cb);
 	});
 
 	peer.on('update', function(id, service, cb) { // do nothing right now
@@ -137,19 +137,19 @@ var onpeer = function(peer) {
 	peer.on('restart', function(id, cb) {
 		ps('restart', {
 			serviceName: id
-		}, cb)
+		}, cb);
 	});
 
 	peer.on('start', function(id, cb) {
 		ps('restart', {
 			serviceName: id
-		}, cb)
+		}, cb);
 	});
 
 	peer.on('stop', function(id, cb) {
 		ps('stop', {
 			serviceName: id
-		}, cb)
+		}, cb);
 	});
 
 	peer.on('list', function(cb) {
@@ -157,7 +157,7 @@ var onpeer = function(peer) {
 			if (err) {
 				return cb(err, null);
 			}
-			cb(null, [].concat(data || []));
+			return cb(null, [].concat(data || []));
 		});
 	});
 
@@ -167,7 +167,7 @@ var onpeer = function(peer) {
 				return cb(err, null);
 			}
 
-			cb(null, [{ id: origin, list: [].concat(data || [])}])
+			return cb(null, [{ id: origin, list: [].concat(data || [])}]);
 		});
 	});
 };
