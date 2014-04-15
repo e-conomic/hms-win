@@ -10,6 +10,14 @@ var pingable = require('pingable');
 var os = require('os');
 var once = require('once');
 var JSONStream = require('JSONStream');
+var argv = require('minimist')(process.argv.slice(2));
+
+process.stdout.setMaxListeners(0);
+process.stderr.setMaxListeners(0);
+if (argv.help) {
+	console.log("Helps stuff");
+	process.exit(0);
+}
 
 var HANDSHAKE =
 	'HTTP/1.1 101 Swiching Protocols\r\n'+
@@ -23,15 +31,20 @@ var PS_SYS_32 = 'c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe'
 var PS = fs.existsSync(PS_SYS_NATIVE) ? PS_SYS_NATIVE : PS_SYS_32;
 if (!fs.existsSync(PS)) throw new Error('powershell not found');
 
-var remote = parse(process.argv[2] || 'localhost:10002');
+var ssh_key = argv.i;
+var tags = ['windows'].concat(argv.tag || []);
+var remote = parse(process.argv[2] || 'localhost:10002', {key:ssh_key});
+
 var origin = os.hostname();
+var debug = argv.debug;
+if (debug) console.log("Using remote:", remote);
 
 var server = http.createServer(function(request, response) {
 	response.end('hms-windows-dock\n');
 });
 
 var tarServer = http.createServer(function(request, response) {
-	console.log('fetching tar: ', request.url);
+	if (debug) console.log('Fetching tar: ', request.url);
 	var req = http.request(xtend(remote, {
 		method:'GET',
 		path:request.url,
@@ -50,15 +63,17 @@ var tarServer = http.createServer(function(request, response) {
 tarServer.listen(7001);
 
 var ps = function(file, opts, cb) {
-	var params = [];
+	var params = ['-ExecutionPolicy', 'remotesigned', '-File', path.join(POWERSHELL, file+'.ps1')];
 
 	Object.keys(opts).forEach(function(key) {
 		params.push('-'+key, opts[key]);
 	});
-
-	var ch = proc.spawn(PS, ['-ExecutionPolicy', 'remotesigned', '-File', path.join(POWERSHELL, file+'.ps1')].concat(params));
+	if (debug) console.log("Spawning ",PS, params);
+	var ch = proc.spawn(PS, params);
 
 	cb = once(cb);
+	if (debug) ch.stdout.pipe(process.stdout);
+	ch.stderr.pipe(process.stderr);
 	ch.stdout.pipe(JSONStream.parse()).once('data', function(data) {
 		cb(null, data);
 	});
@@ -74,29 +89,37 @@ var ps = function(file, opts, cb) {
 
 var dropped = true;
 var connect = function() {
-	var req = http.request(xtend(remote, {
+	var payload = xtend(remote, {
 		method:'CONNECT',
 		path:'/dock',
 		headers:{origin:origin}
-	}));
+	})
+	if (debug) console.log("Connect:", payload);
+	var req = http.request(payload);
 
 	var reconnect = once(function() {
+		console.log("Reconnect");
 		if (dropped) return setTimeout(connect, 5000);
 		dropped = true;
 		return setTimeout(connect, 2500);
 	});
 
-	req.on('error', reconnect);
+	req.on('error', function(err) {
+		console.log("Error:",err);
+		reconnect();
+	});
 	req.on('connect', function(res, socket, data) {
 		dropped = false;
 
 		var peer = protocol();
 		onpeer(peer);
-		peer.handshake({
+		var payload = {
 			id: origin,
 			type: 'dock',
-			tags: ['windows']
-		});
+			tags: tags
+		}
+		if (debug) console.log("Handshake:", payload);
+		peer.handshake(payload);
 
 		pump(socket, peer, socket, reconnect);
 		peer.write(data);
