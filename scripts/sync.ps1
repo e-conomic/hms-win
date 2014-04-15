@@ -54,10 +54,14 @@ function Run-HookScript($hookScript) {
     & $hookScript -serviceName $serviceName -hmsModules "$PSScriptRoot\modules"
     Remove-Item $hookScript
     return [PSCustomObject]@{
-      message = "running startup script";
+      message = "running script: $startupScript";
       status = 201
     }
   }
+    return [PSCustomObject]@{
+      message = "did not find: $startupScript";
+      status = 404
+    }
 }
 
 # TODO: nesting means the messaging is a bit off...
@@ -65,7 +69,12 @@ function Sync-Code() {
   Download-Code $tempFolder
   
   $startupScript = "$tempFolder\startup.ps1"
-  Run-HookScript $startupScript $serviceName
+  $startupRun = Run-HookScript $startupScript $serviceName
+
+  if ($startupRun.status -eq 404) {
+    # Create default service as fallback
+    Create-Service $serviceName $serviceFolder      
+  }
 
   Stop-Service $serviceName
   
