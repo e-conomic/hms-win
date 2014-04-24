@@ -35,8 +35,8 @@ if (!fs.existsSync(PS)) throw new Error('powershell not found');
 
 var ssh_key = param('i');
 var tags = ['windows'].concat(param('tag') || []);
-var remote = parse(process.argv[2] || 'localhost:10002', {key:ssh_key});
 
+var remote = parse(param('terminal') || process.argv[2] || 'localhost:10002', {key:ssh_key});
 var origin = os.hostname();
 var debug = param('debug');
 if (debug) console.log("Using remote:", remote);
