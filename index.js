@@ -10,11 +10,13 @@ var pingable = require('pingable');
 var os = require('os');
 var once = require('once');
 var JSONStream = require('JSONStream');
-var argv = require('minimist')(process.argv.slice(2));
+var param = require('param');
 
 process.stdout.setMaxListeners(0);
 process.stderr.setMaxListeners(0);
-if (argv.help) {
+
+var help = param('help');
+if (help) {
 	console.log("Helps stuff");
 	process.exit(0);
 }
@@ -31,12 +33,12 @@ var PS_SYS_32 = 'c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe'
 var PS = fs.existsSync(PS_SYS_NATIVE) ? PS_SYS_NATIVE : PS_SYS_32;
 if (!fs.existsSync(PS)) throw new Error('powershell not found');
 
-var ssh_key = argv.i;
-var tags = ['windows'].concat(argv.tag || []);
+var ssh_key = param('i');
+var tags = ['windows'].concat(param('tag') || []);
 var remote = parse(process.argv[2] || 'localhost:10002', {key:ssh_key});
 
 var origin = os.hostname();
-var debug = argv.debug;
+var debug = param('debug');
 if (debug) console.log("Using remote:", remote);
 
 var server = http.createServer(function(request, response) {
@@ -80,7 +82,7 @@ var ps = function(file, opts, cb) {
 
 	ch.on('error', cb);
 	ch.on('close', function(code) {
-		if (!code) {
+		if (!code ){
 			return cb();
 		}
 		return cb(new Error('Stream closed without data'));
