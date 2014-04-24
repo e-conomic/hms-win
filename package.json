@@ -14,8 +14,9 @@
     "hms": "^0.3.3",
     "winser": "^0.2.0",
     "param": "^0.3.2"
-  },
+  },  
   "scripts": {
+    "start": "node index.js",
     "postinstall": "winser -i -s -c",
     "preuninstall": "winser -r -x -s"
   },
