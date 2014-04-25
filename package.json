@@ -13,11 +13,13 @@
     "hms-protocol": "^1.2.2",
     "hms": "^0.3.3",
     "winser": "^0.2.0",
-    "param": "^0.3.2"
+    "param": "^0.3.2",
+    "winston": "^0.7.3",
+    "split": "^0.3.0"
   },
   "scripts": {
     "start": "node index.js",
-    "postinstall": "winser -i -s -c",
+    "postinstall": "winser -i -s",
     "preuninstall": "winser -r -x -s"
   },
   "version": "0.6.0"

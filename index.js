@@ -11,15 +11,26 @@ var os = require('os');
 var once = require('once');
 var JSONStream = require('JSONStream');
 var param = require('param');
+var split = require('split');
+
+var winston = require('winston');
+var logfile = param("logfile");
+if (logfile) {	
+	winston.add(winston.transports.File, { filename: logfile, maxsize: 5242880, maxFiles: 10});	
+}
 
 process.stdout.setMaxListeners(0);
 process.stderr.setMaxListeners(0);
 
 var help = param('help');
 if (help) {
-	console.log("Helps stuff");
+	winston.info("Helps stuff");
 	process.exit(0);
 }
+
+var winstonStream = split(function(message) {
+	winston.info(message);
+});
 
 var HANDSHAKE =
 	'HTTP/1.1 101 Swiching Protocols\r\n'+
@@ -39,14 +50,14 @@ var tags = ['windows'].concat(param('tag') || []);
 var remote = parse(param('terminal') || process.argv[2] || 'localhost:10002', {key:ssh_key});
 var origin = os.hostname();
 var debug = param('debug');
-if (debug) console.log("Using remote:", remote);
+if (debug) winston.info("Using remote:", remote);
 
 var server = http.createServer(function(request, response) {
 	response.end('hms-windows-dock\n');
 });
 
 var tarServer = http.createServer(function(request, response) {
-	if (debug) console.log('Fetching tar: ', request.url);
+	if (debug) winston.info('Fetching tar: ', request.url);
 	var req = http.request(xtend(remote, {
 		method:'GET',
 		path:request.url,
@@ -70,11 +81,11 @@ var ps = function(file, opts, cb) {
 	Object.keys(opts).forEach(function(key) {
 		params.push('-'+key, opts[key]);
 	});
-	if (debug) console.log("Spawning ",PS, params);
+	if (debug) winston.info("Spawning ",PS, params);
 	var ch = proc.spawn(PS, params);
 
 	cb = once(cb);
-	if (debug) ch.stdout.pipe(process.stdout);
+	if (debug) ch.stdout.pipe(winstonStream);
 	ch.stderr.pipe(process.stderr);
 	ch.stdout.pipe(JSONStream.parse()).once('data', function(data) {
 		cb(null, data);
@@ -96,18 +107,18 @@ var connect = function() {
 		path:'/dock',
 		headers:{origin:origin}
 	})
-	if (debug) console.log("Connect:", payload);
+	if (debug) winston.info("Connect:", payload);
 	var req = http.request(payload);
 
 	var reconnect = once(function() {
-		console.log("Reconnect");
+		winston.info("Reconnect");
 		if (dropped) return setTimeout(connect, 5000);
 		dropped = true;
 		return setTimeout(connect, 2500);
 	});
 
 	req.on('error', function(err) {
-		console.log("Error:",err);
+		winston.error("Error:",err);
 		reconnect();
 	});
 	req.on('connect', function(res, socket, data) {
@@ -120,7 +131,7 @@ var connect = function() {
 			type: 'dock',
 			tags: tags
 		}
-		if (debug) console.log("Handshake:", payload);
+		if (debug) winston.info("Handshake:", payload);
 		peer.handshake(payload);
 
 		pump(socket, peer, socket, reconnect);
