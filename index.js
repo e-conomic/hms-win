@@ -12,6 +12,7 @@ var once = require('once');
 var JSONStream = require('JSONStream');
 var param = require('param');
 var split = require('split');
+var concat = require('concat-stream');
 
 var winston = require('winston');
 var logfile = param("logfile");
@@ -48,7 +49,7 @@ var ssh_key = param('i');
 var tags = ['windows'].concat(param('tag') || []);
 
 var remote = parse(param('terminal') || process.argv[2] || 'localhost:10002', {key:ssh_key});
-var origin = os.hostname();
+var origin = param('id') || os.hostname();
 var debug = param('debug');
 if (debug) winston.info("Using remote:", remote);
 
@@ -84,14 +85,20 @@ var ps = function(file, opts, cb) {
 	if (debug) winston.info("Spawning ",PS, params);
 	var ch = proc.spawn(PS, params);
 
-	cb = once(cb);
-	if (debug) ch.stdout.pipe(winstonStream);
-	ch.stderr.pipe(process.stderr);
+	var errorStream = concat(function(error) {
+		if (error) {
+			return cb(new Error(error));
+		}		
+	});
+
+	cb = once(cb);	
+	if (debug) ch.stdout.pipe(winstonStream);	
+	ch.stderr.pipe(process.stderr);	
+	ch.stderr.pipe(errorStream);	
 	ch.stdout.pipe(JSONStream.parse()).once('data', function(data) {
 		cb(null, data);
 	});
-
-	ch.on('error', cb);
+	
 	ch.on('close', function(code) {
 		if (!code ){
 			return cb();

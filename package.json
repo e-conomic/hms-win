@@ -15,7 +15,8 @@
     "winser": "^0.2.0",
     "param": "^0.3.2",
     "winston": "^0.7.3",
-    "split": "^0.3.0"
+    "split": "^0.3.0",
+    "concat-stream": "^1.4.5"
   },
   "scripts": {
     "start": "node index.js",
