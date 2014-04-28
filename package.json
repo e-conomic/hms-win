@@ -23,5 +23,5 @@
     "postinstall": "winser -i -s",
     "preuninstall": "winser -r -x -s"
   },
-  "version": "0.6.2"
+  "version": "0.6.3"
 }
