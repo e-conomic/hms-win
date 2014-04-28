@@ -1,1 +1,0 @@
-node . ubuntu@deployment.playground.e-conomic.ws --port 10002 --id nkntest --tag donotuse --debug --i c:\Users\nkn\.ssh\hms_id_rsa --logfile somefile.log
